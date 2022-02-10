@@ -1,8 +1,10 @@
 package user
 
-type User struct {
-	ID           string `json:"ID" bson:"_id,omitempty"`
-	Username     string
-	PasswordHash string
-	Email        string
+import "context"
+
+type Storage interface {
+	Create(ctx context.Context, user User) (string, error)
+	FindOne(ctx context.Context, id string) (User, error)
+	Update(ctx context.Context, user User) error
+	Delete(ctx context.Context, id string) error
 }
