@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -41,11 +42,15 @@ func (d *db) FindOne(ctx context.Context, id string) (u user.User, err error) {
 
 	if result.Err() != nil {
 		// TODO 404
+		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
+			return u, fmt.Errorf("ErrEntityNotFound")
+		}
 		return u, fmt.Errorf("failed to find user by ID: %s due to error %v", id, result.Err())
 	}
 	if err = result.Decode(&u); err != nil {
 		return u, fmt.Errorf("failed to decode user (ID: %s) from DB due to error %v", id, err)
 	}
+	return u, nil
 }
 
 func (d *db) Update(ctx context.Context, user user.User) error {
@@ -75,7 +80,7 @@ func (d *db) Update(ctx context.Context, user user.User) error {
 		return fmt.Errorf("failed to execute update query. error: %v", err)
 	}
 	if result.MatchedCount == 0 {
-		//TODO ErrEntityNotFound
+
 		return fmt.Errorf("error user not found")
 	}
 	d.logger.Tracef("Matched %d documents and Modified documents: %d", result.MatchedCount, result.ModifiedCount)
@@ -83,8 +88,22 @@ func (d *db) Update(ctx context.Context, user user.User) error {
 }
 
 func (d *db) Delete(ctx context.Context, id string) error {
-	//TODO implement me
-	panic("implement me")
+	objectID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return fmt.Errorf("failed to convert user ID to ObjectID. ID=%s", id)
+	}
+
+	filter := bson.M{"_id": objectID}
+
+	result, err := d.collection.DeleteOne(ctx, filter)
+	if err != nil {
+		return fmt.Errorf("failed to delete document due to error: %v", err)
+	}
+	if result.DeletedCount == 0 {
+		return fmt.Errorf("not found")
+	}
+	d.logger.Tracef("Deleted %d documents", result.DeletedCount)
+	return nil
 }
 
 func NewStorage(database *mongo.Database, collection string, logger *logging.Logger) user.Storage {
