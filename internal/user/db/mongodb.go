@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"rest-api-tutorial/internal/user"
@@ -26,12 +27,25 @@ func (d *db) Create(ctx context.Context, user user.User) (string, error) {
 		return oid.Hex(), nil
 	}
 	d.logger.Trace(user)
-	return "", fmt.Errorf("failed to convert object to hex")
+	return "", fmt.Errorf("failed to convert object to hex. oid: %s", oid)
 }
 
-func (d *db) FindOne(ctx context.Context, id string) (user.User, error) {
-	//TODO implement me
-	panic("implement me")
+func (d *db) FindOne(ctx context.Context, id string) (u user.User, err error) {
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return u, fmt.Errorf("failed to convert hex to objectID. HEX:  %s", id)
+	}
+	filter := bson.M{"_id": oid}
+
+	result := d.collection.FindOne(ctx, filter)
+
+	if result.Err() != nil {
+		// TODO 404
+		return u, fmt.Errorf("failed to find user by ID: %s due to error %v", id, result.Err())
+	}
+	if err = result.Decode(&u); err != nil {
+		return u, fmt.Errorf("failed to decode user (ID: %s) from DB due to error %v", id, err)
+	}
 }
 
 func (d *db) Update(ctx context.Context, user user.User) error {
