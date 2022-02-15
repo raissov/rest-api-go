@@ -2,9 +2,9 @@
 
 is_debug: true
 listen:
-  type: sock
+  type: blabla
   bind_ip: 0.0.0.0
-  port: 10000
+  port: 1234
 mongodb:
   host: localhost 
   port: 27017
