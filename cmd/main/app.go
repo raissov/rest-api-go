@@ -30,17 +30,9 @@ func main() {
 	}
 	storage := db.NewStorage(mongoDBClient, cfg.MongoDB.Collection, logger)
 
-	user1 := user.User{
-		ID:           "",
-		Email:        "raissov1@gmail.com",
-		Username:     "raissov",
-		PasswordHash: "12345",
-	}
-	user1ID, err := storage.Create(context.Background(), user1)
-	if err != nil {
-		panic(err)
-	}
-	logger.Info(user1ID)
+	users, err := storage.FindAll(context.Background())
+
+	logger.Info(users)
 
 	logger.Info("register user handler")
 	handler := user.NewHandler(*logger)
